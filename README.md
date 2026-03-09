@@ -150,6 +150,22 @@ Deploy On **Koyeb** In One Click!
 
 </details>
 
+
+<details>
+  <summary><b>Render</b></summary>  
+
+Deploy On **Render** using the included `render.yaml` blueprint.
+
+1. Fork this repository.
+2. In Render, click **New +** → **Blueprint** and select your fork.
+3. Set all required environment variables from the **Variables** section above.
+4. Confirm the defaults:
+   - **Python version:** `3.11.7`
+   - **Start command:** `python3 bot.py`
+   - **Port:** `PORT` env (default `10000`)
+
+</details>
+
 <details>
   <summary><b>VPS</b></summary>  
 
