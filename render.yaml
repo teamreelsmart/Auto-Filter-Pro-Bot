@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: auto-filter-pro-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python3 bot.py
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: PORT
+        value: 10000
+      - key: WEB_SERVER_BIND_ADDRESS
+        value: 0.0.0.0
+      - key: NO_PORT
+        value: "False"
