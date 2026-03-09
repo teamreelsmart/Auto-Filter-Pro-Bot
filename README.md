@@ -48,7 +48,7 @@
 * `ADMINS`: ID Of Admins. (Multiple admins can be used separated by space)
 * `DATABASE_URI`: Your First MongoDB URL. Get This Value From [MongoDB](https://www.mongodb.com).
 * `MULTIPLE_DB`: Set It True Or False. If You Set This True Then All Files Saved In Second MongoDB If First MongoDB 80MB Left.
-* `DATABASE_URI2`: Your Second MongoDB URL (Optional - Add This If You Set MULTIPLE_DB True.).
+* `DATABASE_URI2`: Your Second MongoDB URL (Optional). If empty, bot will safely reuse `DATABASE_URI` as fallback.
 * `LOG_CHANNEL` : A Channel To Log The Activities Of Bot. Add Channel Id And Make Sure Bot Is An Admin In The Channel.
 * `SUPPORT_GROUP`: Add Your Support Group Id In This Veriable.
 * `BIN_CHANNEL`: A Channel To The Stream And Download Feature, Add Channel Id And Make Bot Admin In Channel.
@@ -147,6 +147,22 @@ Deploy On **Koyeb** In One Click!
   </a>
 </p>
 
+
+</details>
+
+
+<details>
+  <summary><b>Render</b></summary>  
+
+Deploy On **Render** using the included `render.yaml` blueprint.
+
+1. Fork this repository.
+2. In Render, click **New +** → **Blueprint** and select your fork.
+3. Set all required environment variables from the **Variables** section above.
+4. Confirm the defaults:
+   - **Python version:** `3.11.7`
+   - **Start command:** `python3 bot.py`
+   - **Port:** `PORT` env (default `10000`)
 
 </details>
 
