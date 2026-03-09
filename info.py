@@ -194,12 +194,10 @@ Bot_cmds = {
 
 #Don't Change Anything Here
 
-if MULTIPLE_DB == False:
-    DATABASE_URI = DATABASE_URI
+if not MULTIPLE_DB:
     DATABASE_URI2 = DATABASE_URI
-else:
-    DATABASE_URI = DATABASE_URI
-    DATABASE_URI2 = DATABASE_URI2
+elif not DATABASE_URI2:
+    DATABASE_URI2 = DATABASE_URI
 
 AUTH_CHANNEL = [int(ch) for ch in AUTH_CHANNEL.strip().split()] if AUTH_CHANNEL else []
 AUTH_REQ_CHANNEL = [int(ch) for ch in AUTH_REQ_CHANNEL.strip().split()] if AUTH_REQ_CHANNEL else []
