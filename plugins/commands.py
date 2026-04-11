@@ -25,6 +25,30 @@ from .fsub_helper import check_force_subscription, is_req_subscribed, is_subscri
 TIMEZONE = "Asia/Kolkata"
 BATCH_FILES = {}
 
+async def get_user_lang(user_id):
+    return await db.get_user_language(user_id)
+
+def t(lang, en_text, hi_text):
+    return hi_text if lang == "hi" else en_text
+
+async def send_limit_verify_prompt(message, user_id):
+    lang = await get_user_lang(user_id)
+    btn = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            t(lang, "🎟️ Buy Premium", "🎟️ Premium खरीदें"),
+            callback_data="premium"
+        )
+    ]])
+    await message.reply_text(
+        t(
+            lang,
+            "<b>❌ Daily free file limit reached.\n\nTo continue, please verify your account or buy premium.</b>",
+            "<b>❌ आपकी daily free file limit पूरी हो गई है।\n\nआगे files लेने के लिए verify करें या premium खरीदें।</b>"
+        ),
+        reply_markup=btn,
+        parse_mode=enums.ParseMode.HTML
+    )
+
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
     bot_id = client.me.id
@@ -219,6 +243,14 @@ async def start(client, message):
         
     user_id = m.from_user.id
     if not await db.has_premium_access(user_id):
+        free_limit = await db.get_free_daily_limit()
+        limit_status = await db.get_user_daily_limit_status(user_id, free_limit)
+        requested_files = len(temp.GETALL.get(file_id, [])) if data.startswith("allfiles") else 1
+        if requested_files <= 0:
+            requested_files = 1
+        if limit_status["used"] + requested_files > free_limit:
+            await send_limit_verify_prompt(m, user_id)
+            return
         try:
             grp_id = int(grp_id)
             user_verified = await db.is_user_verified(user_id)
@@ -301,6 +333,8 @@ async def start(client, message):
                 reply_markup=InlineKeyboardMarkup(btn)
             )
             filesarr.append(msg)
+        if not await db.has_premium_access(user_id):
+            await db.add_daily_limit_usage(user_id, len(files))
         k = await client.send_message(chat_id=message.from_user.id, text=f"<b><u>❗️❗️❗️IMPORTANT❗️️❗️❗️</u></b>\n\nᴛʜɪꜱ ᴍᴏᴠɪᴇ ꜰɪʟᴇ/ᴠɪᴅᴇᴏ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ <b><u><code>{get_time(DELETE_TIME)}</code></u> 🫥 <i></b>(ᴅᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪꜱꜱᴜᴇꜱ)</i>.\n\n<b><i>ᴘʟᴇᴀꜱᴇ ꜰᴏʀᴡᴀʀᴅ ᴛʜɪꜱ ꜰɪʟᴇ ᴛᴏ ꜱᴏᴍᴇᴡʜᴇʀᴇ ᴇʟꜱᴇ ᴀɴᴅ ꜱᴛᴀʀᴛ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴛʜᴇʀᴇ</i></b>")
 
         async def delete_all_after_delay(messages, k, delay):
@@ -339,6 +373,8 @@ async def start(client, message):
                 file_id=file_id,
                 protect_content=settings.get('file_secure', PROTECT_CONTENT),
                 reply_markup=InlineKeyboardMarkup(btn))
+            if not await db.has_premium_access(user):
+                await db.add_daily_limit_usage(user, 1)
 
             filetype = msg.media
             file = getattr(msg, filetype.value)
@@ -405,6 +441,8 @@ async def start(client, message):
         protect_content=settings.get('file_secure', PROTECT_CONTENT),
         reply_markup=InlineKeyboardMarkup(btn)
     )
+    if not await db.has_premium_access(user):
+        await db.add_daily_limit_usage(user, 1)
     k = await msg.reply(f"<b>♻️ ᴛʜɪꜱ ꜰɪʟᴇ ᴡɪʟʟ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴀꜰᴛᴇʀ {get_time(DELETE_TIME)}</b>", quote=True)     
 
     async def single_delete(msg, k, delay):
@@ -727,6 +765,62 @@ async def send_msg(bot, message):
             await message.reply_text(f"<b>Error: {e}</b>")
     else:
         await message.reply_text("<b>ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ᴀꜱ ᴀ ʀᴇᴘʟʏ ᴛᴏ ᴀɴʏ ᴍᴇꜱꜱᴀɢᴇ ᴜꜱɪɴɢ ᴛʜᴇ ᴛᴀʀɢᴇᴛ ᴄʜᴀᴛ ɪᴅ. ꜰᴏʀ ᴇɢ:  /send ᴜꜱᴇʀɪᴅ</b>")
+
+@Client.on_message(filters.command("set_limit") & filters.user(ADMINS))
+async def set_limit_cmd(client, message):
+    if len(message.command) != 2 or not message.command[1].isdigit():
+        return await message.reply_text("Usage: /set_limit <number>")
+    limit = int(message.command[1])
+    if limit < 1:
+        return await message.reply_text("Limit must be greater than 0.")
+    await db.set_free_daily_limit(limit)
+    await message.reply_text(f"✅ Daily free limit set to <code>{limit}</code> files per user.\nReset time: 12:00 AM IST.")
+
+@Client.on_message(filters.command("resetlimit") & filters.user(ADMINS))
+async def reset_limit_cmd(client, message):
+    if len(message.command) != 2 or not message.command[1].isdigit():
+        return await message.reply_text("Usage: /resetlimit <userid>")
+    user_id = int(message.command[1])
+    await db.reset_user_daily_limit(user_id)
+    await message.reply_text(f"✅ Daily limit usage reset for user <code>{user_id}</code>.")
+
+@Client.on_message(filters.command("full_limit") & filters.user(ADMINS))
+async def full_limit_cmd(client, message):
+    if len(message.command) != 2 or not message.command[1].isdigit():
+        return await message.reply_text("Usage: /full_limit <userid>")
+    user_id = int(message.command[1])
+    await db.full_user_daily_limit(user_id)
+    status = await db.get_user_daily_limit_status(user_id)
+    await message.reply_text(
+        f"✅ User <code>{user_id}</code> marked as full-used.\nUsed: <code>{status['used']}/{status['limit']}</code>."
+    )
+
+@Client.on_message(filters.command("get_limits") & filters.user(ADMINS))
+async def get_limits_cmd(client, message):
+    limits = await db.get_all_users_daily_limits()
+    if not limits:
+        return await message.reply_text("No users found.")
+    lines = ["<b>📊 Daily Limit Usage (IST)</b>\n"]
+    for idx, item in enumerate(sorted(limits, key=lambda x: x["used"], reverse=True), start=1):
+        lines.append(f"{idx}. <code>{item['id']}</code> - <code>{item['used']}/{item['limit']}</code>")
+    text = "\n".join(lines)
+    if len(text) > 3900:
+        with open("daily_limits.txt", "w", encoding="utf-8") as f:
+            f.write("\n".join(line.replace("<b>", "").replace("</b>", "") for line in lines))
+        await message.reply_document("daily_limits.txt", caption="Daily limit usage")
+    else:
+        await message.reply_text(text, parse_mode=enums.ParseMode.HTML)
+
+@Client.on_message(filters.command("language"))
+async def language_cmd(client, message):
+    user_id = message.from_user.id
+    current = await db.get_user_language(user_id)
+    new_lang = "hi" if current == "en" else "en"
+    await db.set_user_language(user_id, new_lang)
+    msg = "✅ Language switched to Hindi." if new_lang == "hi" else "✅ Language switched to English."
+    if new_lang == "hi":
+        msg += "\nअब bot replies Hindi में दिखाई देंगी (जहां supported है)।"
+    await message.reply_text(msg)
 
 @Client.on_message(filters.command("deletefiles") & filters.user(ADMINS))
 async def deletemultiplefiles(bot, message):
