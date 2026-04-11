@@ -51,7 +51,7 @@ MULTIPLE_DB = is_enabled(os.environ.get('MULTIPLE_DB', "True"), True) # Type Tru
 DATABASE_URI2 = environ.get('DATABASE_URI2', "")
 DB_CHANGE_LIMIT = int(environ.get('DB_CHANGE_LIMIT', "432")) 
 
-GRP_LNK = environ.get('GRP_LNK', 'https://t.me/+6Pw3G0sBFVpkMmY1')
+GRP_LNK = environ.get('GRP_LNK', 'https://t.me/+uELo1oS15nwxZjU1')
 CHNL_LNK = environ.get('CHNL_LNK', 'https://t.me/TheOrviX')
 OWNER_LNK = environ.get('OWNER_LNK', 'https://t.me/TheOrviz')
 UPDATE_CHANNEL_LNK = environ.get('UPDATE_CHANNEL_LNK', 'https://t.me/TheOrviX')
@@ -59,7 +59,7 @@ UPDATE_CHANNEL_LNK = environ.get('UPDATE_CHANNEL_LNK', 'https://t.me/TheOrviX')
 AUTH_CHANNEL = environ.get("AUTH_CHANNEL", "") # add multiple channels here, separated by single space
 AUTH_REQ_CHANNEL = environ.get('AUTH_REQ_CHANNEL', '')
 
-IS_VERIFY = is_enabled('IS_VERIFY', False)
+IS_VERIFY = is_enabled('IS_VERIFY', True)
 LOG_VR_CHANNEL = int(environ.get('LOG_VR_CHANNEL', ''))
 LOG_API_CHANNEL = int(environ.get('LOG_API_CHANNEL', ''))
 VERIFY_IMG = environ.get("VERIFY_IMG", "https://telegra.ph/file/9ecc5d6e4df5b83424896.jpg")
