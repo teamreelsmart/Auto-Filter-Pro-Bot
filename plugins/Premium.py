@@ -32,6 +32,8 @@ async def myplan(client, message):
     try:
         user = message.from_user.mention 
         user_id = message.from_user.id
+        lang = await db.get_user_language(user_id)
+        daily = await db.get_user_daily_limit_status(user_id)
         data = await db.get_user(message.from_user.id) 
         if data and data.get("expiry_time"):
             expiry = data.get("expiry_time") 
@@ -43,10 +45,38 @@ async def myplan(client, message):
             hours, remainder = divmod(time_left.seconds, 3600)
             minutes, seconds = divmod(remainder, 60)
             time_left_str = f"{days} ᴅᴀʏꜱ, {hours} ʜᴏᴜʀꜱ, {minutes} ᴍɪɴᴜᴛᴇꜱ"
-            await message.reply_text(f"⚜️ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ ᴅᴀᴛᴀ :\n\n👤 ᴜꜱᴇʀ : {user}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n⏰ ᴛɪᴍᴇ ʟᴇꜰᴛ : {time_left_str}\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}")   
+            if lang == "hi":
+                txt = (
+                    f"⚜️ प्रीमियम यूज़र डेटा:\n\n👤 यूज़र: {user}\n⚡ यूज़र आईडी: <code>{user_id}</code>\n"
+                    f"⏰ बचा समय: {time_left_str}\n⌛️ एक्सपायरी: {expiry_str_in_ist}\n\n"
+                    f"📊 Daily Free Limit: <code>{daily['used']}/{daily['limit']}</code> (IST reset)"
+                )
+            else:
+                txt = (
+                    f"⚜️ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ ᴅᴀᴛᴀ :\n\n👤 ᴜꜱᴇʀ : {user}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n"
+                    f"⏰ ᴛɪᴍᴇ ʟᴇꜰᴛ : {time_left_str}\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}\n\n"
+                    f"📊 Daily Free Limit: <code>{daily['used']}/{daily['limit']}</code> (IST reset)"
+                )
+            await message.reply_text(txt)
         else:
-            await message.reply_text(f"<b>ʜᴇʏ {user},\n\nʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴀ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ. ʙᴜʏ ᴏᴜʀ ꜱᴜʙꜱᴄʀɪᴘᴛɪᴏɴ ᴛᴏ ᴜꜱᴇ ᴘʀᴇᴍɪᴜᴍ ʙᴇɴᴇꜰɪᴛꜱ.</b>",
-	    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("• ᴄʜᴇᴄᴋᴏᴜᴛ ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ •", callback_data='buy')]]))
+            if lang == "hi":
+                txt = (
+                    f"<b>हे {user},\n\nआपका कोई active premium plan नहीं है।\n"
+                    f"फ्री लिमिट उपयोग: <code>{daily['used']}/{daily['limit']}</code>.\n"
+                    f"रोजाना लिमिट रात 12:00 AM (IST) पर reset होती है।</b>"
+                )
+                btn_text = "• प्रीमियम प्लान देखें •"
+            else:
+                txt = (
+                    f"<b>ʜᴇʏ {user},\n\nʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴀ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ.\n"
+                    f"Free limit usage: <code>{daily['used']}/{daily['limit']}</code>.\n"
+                    f"Daily limit resets at 12:00 AM IST.</b>"
+                )
+                btn_text = "• ᴄʜᴇᴄᴋᴏᴜᴛ ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ •"
+            await message.reply_text(
+                txt,
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data='buy')]])
+            )
     except Exception as e:
         LOGGER.info(e)
 

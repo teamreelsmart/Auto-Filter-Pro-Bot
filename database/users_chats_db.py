@@ -194,6 +194,91 @@ class Database:
     async def get_user(self, user_id):
         user_data = await self.users.find_one({"id": user_id})
         return user_data
+
+    def _ist_day_key(self):
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        return datetime.datetime.now(tz=ist_timezone).strftime("%Y-%m-%d")
+
+    async def get_free_daily_limit(self, bot_id=0):
+        return await self.get_bot_setting(bot_id, 'FREE_DAILY_LIMIT', 28)
+
+    async def set_free_daily_limit(self, limit, bot_id=0):
+        await self.update_bot_setting(bot_id, 'FREE_DAILY_LIMIT', int(limit))
+
+    async def set_user_language(self, user_id, language):
+        await self.users.update_one(
+            {"id": int(user_id)},
+            {"$set": {"id": int(user_id), "language": language}},
+            upsert=True
+        )
+
+    async def get_user_language(self, user_id):
+        user_data = await self.get_user(int(user_id)) or {}
+        return user_data.get("language", "en")
+
+    async def get_user_daily_limit_status(self, user_id, limit=None):
+        user_id = int(user_id)
+        if limit is None:
+            limit = await self.get_free_daily_limit()
+        today = self._ist_day_key()
+        user_data = await self.get_user(user_id) or {}
+        usage = int(user_data.get("daily_limit_used", 0))
+        usage_date = user_data.get("daily_limit_date")
+        if usage_date != today:
+            usage = 0
+            await self.users.update_one(
+                {"id": user_id},
+                {"$set": {"id": user_id, "daily_limit_used": 0, "daily_limit_date": today}},
+                upsert=True
+            )
+        remaining = max(0, int(limit) - usage)
+        return {
+            "used": usage,
+            "remaining": remaining,
+            "limit": int(limit),
+            "date": today,
+        }
+
+    async def add_daily_limit_usage(self, user_id, amount=1, limit=None):
+        status = await self.get_user_daily_limit_status(user_id, limit)
+        new_used = status["used"] + int(amount)
+        await self.users.update_one(
+            {"id": int(user_id)},
+            {"$set": {"daily_limit_used": new_used, "daily_limit_date": status["date"]}},
+            upsert=True
+        )
+        status["used"] = new_used
+        status["remaining"] = max(0, status["limit"] - new_used)
+        return status
+
+    async def reset_user_daily_limit(self, user_id):
+        today = self._ist_day_key()
+        await self.users.update_one(
+            {"id": int(user_id)},
+            {"$set": {"id": int(user_id), "daily_limit_used": 0, "daily_limit_date": today}},
+            upsert=True
+        )
+
+    async def full_user_daily_limit(self, user_id, limit=None):
+        if limit is None:
+            limit = await self.get_free_daily_limit()
+        today = self._ist_day_key()
+        await self.users.update_one(
+            {"id": int(user_id)},
+            {"$set": {"id": int(user_id), "daily_limit_used": int(limit), "daily_limit_date": today}},
+            upsert=True
+        )
+
+    async def get_all_users_daily_limits(self, limit=None):
+        if limit is None:
+            limit = await self.get_free_daily_limit()
+        out = []
+        users = self.col.find({})
+        async for user in users:
+            user_id = int(user.get("id"))
+            status = await self.get_user_daily_limit_status(user_id, limit)
+            out.append({"id": user_id, **status})
+        return out
     async def update_user(self, user_data):
         await self.users.update_one({"id": user_data["id"]}, {"$set": user_data}, upsert=True)
 
